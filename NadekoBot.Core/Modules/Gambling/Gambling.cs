@@ -6,6 +6,7 @@ using NadekoBot.Common.Attributes;
 using NadekoBot.Core.Common;
 using NadekoBot.Core.Modules.Gambling.Common;
 using NadekoBot.Core.Services;
+using NadekoBot.Core.Services.Database;
 using NadekoBot.Core.Services.Database.Models;
 using NadekoBot.Extensions;
 using NadekoBot.Modules.Gambling.Services;
@@ -26,13 +27,15 @@ namespace NadekoBot.Modules.Gambling
         private readonly DiscordSocketClient _client;
         private readonly IBotConfigProvider _bc;
         private readonly NumberFormatInfo _enUsCulture;
+        private readonly DownloadTracker _tracker;
 
         private string CurrencyName => Bc.BotConfig.CurrencyName;
         private string CurrencyPluralName => Bc.BotConfig.CurrencyPluralName;
         private string CurrencySign => Bc.BotConfig.CurrencySign;
 
         public Gambling(DbService db, ICurrencyService currency,
-            IDataCache cache, DiscordSocketClient client, IBotConfigProvider bc)
+            IDataCache cache, DiscordSocketClient client, IBotConfigProvider bc,
+            DownloadTracker tracker)
         {
             _db = db;
             _cs = currency;
@@ -42,6 +45,7 @@ namespace NadekoBot.Modules.Gambling
             _enUsCulture = new CultureInfo("en-US", false).NumberFormat;
             _enUsCulture.NumberDecimalDigits = 0;
             _enUsCulture.NumberGroupSeparator = " ";
+            _tracker = tracker;
         }
 
         private string n(long cur) => cur.ToString("N", _enUsCulture);
@@ -482,41 +486,92 @@ namespace NadekoBot.Modules.Gambling
             => InternallBetroll(amount);
 
         [NadekoCommand, Usage, Description, Aliases]
-        public async Task Leaderboard(int page = 1)
+        [NadekoOptions(typeof(LbOpts))]
+        [Priority(0)]
+        public Task Leaderboard(params string[] args)
+            => Leaderboard(1, args);
+
+        [NadekoCommand, Usage, Description, Aliases]
+        [NadekoOptions(typeof(LbOpts))]
+        [Priority(1)]
+        public async Task Leaderboard(int page = 1, params string[] args)
         {
-            if (page < 1)
+            if (--page < 0)
                 return;
 
-            List<DiscordUser> richest;
-            using (var uow = _db.GetDbContext())
+            var (opts, _) = OptionsParser.ParseFrom(new LbOpts(), args);
+
+            List<DiscordUser> cleanRichest = new List<DiscordUser>();
+            // it's pointless to have clean on dm context
+            if (Context.Guild is null)
             {
-                richest = uow.DiscordUsers.GetTopRichest(_client.CurrentUser.Id, 9, 9 * (page - 1)).ToList();
+                opts.Clean = false;
             }
 
-            var embed = new EmbedBuilder()
-                .WithOkColor()
-                .WithTitle(CurrencySign + " " + GetText("leaderboard"))
-                .WithFooter(efb => efb.WithText(GetText("page", page)));
-
-            if (!richest.Any())
+            if (opts.Clean)
             {
-                embed.WithDescription(GetText("no_users_found"));
-                await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
-                return;
+                var now = DateTime.UtcNow;
+
+                using (var uow = _db.GetDbContext())
+                {
+                    cleanRichest = uow.DiscordUsers.GetTopRichest(_client.CurrentUser.Id, 10_000);
+                }
+                var res = _tracker.LastDownloads.AddOrUpdate(Context.Guild.Id, now, (key, old) => (now - old) > TimeSpan.FromHours(1) ? now : old);
+                if (res == now)
+                {
+                    await Context.Channel.TriggerTypingAsync().ConfigureAwait(false);
+                    await Context.Guild.DownloadUsersAsync().ConfigureAwait(false);
+                }
+
+                var sg = (SocketGuild)Context.Guild;
+                cleanRichest = cleanRichest.Where(x => sg.GetUser(x.UserId) != null)
+                    .ToList();
+            }
+            else
+            {
+                using (var uow = _db.GetDbContext())
+                {
+                    cleanRichest = uow.DiscordUsers.GetTopRichest(_client.CurrentUser.Id, 9, page).ToList();
+                }
             }
 
-            for (var i = 0; i < richest.Count; i++)
+            await Context.SendPaginatedConfirmAsync(page, curPage =>
             {
-                var x = richest[i];
-                var usrStr = x.ToString().TrimTo(20, true);
+                var embed = new EmbedBuilder()
+                   .WithOkColor()
+                   .WithTitle(CurrencySign + " " + GetText("leaderboard"));
 
-                var j = i;
-                embed.AddField(efb => efb.WithName("#" + (9 * (page - 1) + j + 1) + " " + usrStr)
-                                         .WithValue(n(x.CurrencyAmount) + " " + CurrencySign)
-                                         .WithIsInline(true));
-            }
+                List<DiscordUser> toSend;
+                if (!opts.Clean)
+                {
+                    using (var uow = _db.GetDbContext())
+                    {
+                        toSend = uow.DiscordUsers.GetTopRichest(_client.CurrentUser.Id, 9, curPage);
+                    }
+                }
+                else
+                {
+                    toSend = cleanRichest.Skip(curPage * 9).Take(9).ToList();
+                }
+                 if (!toSend.Any())
+                 {
+                     embed.WithDescription(GetText("no_user_on_this_page"));
+                     return embed;
+                 }
 
-            await ctx.Channel.EmbedAsync(embed).ConfigureAwait(false);
+                 for (var i = 0; i < toSend.Count; i++)
+                 {
+                     var x = toSend[i];
+                     var usrStr = x.ToString().TrimTo(20, true);
+
+                     var j = i;
+                     embed.AddField(efb => efb.WithName("#" + (9 * curPage + j + 1) + " " + usrStr)
+                                              .WithValue(n(x.CurrencyAmount) + " " + CurrencySign)
+                                              .WithIsInline(true));
+                 }
+
+                 return embed;
+             }, opts.Clean ? cleanRichest.Count() : 9000, 9, opts.Clean);
         }
 
 

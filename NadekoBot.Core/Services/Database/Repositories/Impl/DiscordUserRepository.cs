@@ -54,11 +54,17 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public int GetUserGlobalRank(ulong id)
         {
-            return _set
-                       .Count(x => x.TotalXp > (_set
-                                       .Where(y => y.UserId == id)
-                                       .Select(y => y.TotalXp)
-                                       .FirstOrDefault())) + 1;
+            //            @"SELECT COUNT(*) + 1
+            //FROM DiscordUser
+            //WHERE TotalXp > COALESCE((SELECT TotalXp
+            //    FROM DiscordUser
+            //    WHERE UserId = @p1
+            //    LIMIT 1), 0);"
+            return _set.Where(x => x.TotalXp > (_set
+                    .Where(y => y.UserId == id)
+                    .Select(y => y.TotalXp)
+                    .FirstOrDefault()))
+                .Count() + 1;
         }
 
         public DiscordUser[] GetUsersXpLeaderboardFor(int page)
@@ -71,11 +77,19 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
                 .ToArray();
         }
 
-        public IEnumerable<DiscordUser> GetTopRichest(ulong botId, int count, int skip = 0)
+        public List<DiscordUser> GetTopRichest(ulong botId, int count, int page = 0)
         {
             return _set.Where(c => c.CurrencyAmount > 0 && botId != c.UserId)
                 .OrderByDescending(c => c.CurrencyAmount)
-                .Skip(skip)
+                .Skip(page * 9)
+                .Take(count)
+                .ToList();
+        }
+
+        public List<DiscordUser> GetTopRichest(ulong botId, int count)
+        {
+            return _set.Where(c => c.CurrencyAmount > 0 && botId != c.UserId)
+                .OrderByDescending(c => c.CurrencyAmount)
                 .Take(count)
                 .ToList();
         }
@@ -92,8 +106,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
             }
         }
 
-        public bool TryUpdateCurrencyState(ulong userId, string name, string discrim, string avatarId, long amount,
-            bool allowNegative = false)
+        public bool TryUpdateCurrencyState(ulong userId, string name, string discrim, string avatarId, long amount, bool allowNegative = false)
         {
             if (amount == 0)
                 return true;
@@ -202,7 +215,6 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
                                                             VALUES ({userId}, {name}, {discrim}, {avatarId}, {amount});");
                 }
             }
-
             return true;
         }
 
@@ -227,7 +239,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public long GetCurrencyDecayAmount(float decay)
         {
-            return (long) _set.Sum(x => Math.Round(x.CurrencyAmount * decay - 0.5));
+            return (long)_set.Sum(x => Math.Round(x.CurrencyAmount * decay - 0.5));
         }
 
         public decimal GetTotalCurrency()

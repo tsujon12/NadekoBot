@@ -14,12 +14,10 @@ using Newtonsoft.Json.Linq;
 using NLog;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Drawing;
-using SixLabors.ImageSharp.Processing.Text;
-using SixLabors.ImageSharp.Processing.Transforms;
-using SixLabors.Primitives;
+using StackExchange.Redis;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -137,67 +135,57 @@ namespace NadekoBot.Modules.Searches.Services
             return data.ToStream();
         }
 
-        public async Task<byte[]> GetRipPictureFactory((string text, Uri imgUrl) arg)
+        private void DrawAvatar(Image bg, Image avatarImage)
+            => bg.Mutate(x => x.Grayscale().DrawImage(avatarImage, new Point(83, 139), new GraphicsOptions()));
+
+        public async Task<byte[]> GetRipPictureFactory((string text, Uri avatarUrl) arg)
         {
-            var (text, imgUrl) = arg;
-            var (succ, data) = await _cache.TryGetImageDataAsync(imgUrl).ConfigureAwait(false);
-            if (!succ)
+            var (text, avatarUrl) = arg;
+            using (var bg = Image.Load<Rgba32>(_imgs.Rip.ToArray()))
             {
-                using (var http = _httpFactory.CreateClient())
-                using (var temp = await http.GetAsync(imgUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
+                var (succ, data) = (false, (byte[])null); //await _cache.TryGetImageDataAsync(avatarUrl);
+                if (!succ)
                 {
-                    if (!temp.IsImage())
+                    using (var http = _httpFactory.CreateClient())
                     {
-                        data = null;
-                    }
-                    else
-                    {
-                        var imgData = await temp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
-                        using (var tempDraw = Image.Load(imgData))
+                        data = await http.GetByteArrayAsync(avatarUrl);
+                        using (var avatarImg = Image.Load<Rgba32>(data))
                         {
-                            tempDraw.Mutate(x => x.Resize(69, 70));
-                            tempDraw.ApplyRoundedCorners(35);
-                            using (var tds = tempDraw.ToStream())
-                            {
-                                data = tds.ToArray();
-                            }
+                            avatarImg.Mutate(x => x
+                                .Resize(85, 85)
+                                .ApplyRoundedCorners(42));
+                            data = avatarImg.ToStream().ToArray();
+                            DrawAvatar(bg, avatarImg);
                         }
+                        await _cache.SetImageDataAsync(avatarUrl, data);
                     }
                 }
-                await _cache.SetImageDataAsync(imgUrl, data).ConfigureAwait(false);
-            }
-            using (var bg = Image.Load(_imgs.Rip.ToArray()))
-            {
-                //avatar 82, 139
-                if (data != null)
+                else
                 {
-                    using (var avatar = Image.Load(data))
+                    using (var avatarImg = Image.Load<Rgba32>(data))
                     {
-                        avatar.Mutate(x => x.Resize(85, 85));
-                        bg.Mutate(x => x
-                            .DrawImage(GraphicsOptions.Default,
-                                avatar,
-                                new Point(82, 139)));
+                        DrawAvatar(bg, avatarImg);
                     }
                 }
-                //text 63, 241
+
                 bg.Mutate(x => x.DrawText(
                     new TextGraphicsOptions()
                     {
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        WrapTextWidth = 190,
+                        TextOptions = new TextOptions
+                        {
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            WrapTextWidth = 190,
+                        }.WithFallbackFonts(_fonts.FallBackFonts)
                     },
                     text,
-                    _fonts.NotoSans.CreateFont(20, FontStyle.Bold),
-                    Rgba32.Black,
+                    _fonts.RipFont,
+                    SixLabors.ImageSharp.Color.Black,
                     new PointF(25, 225)));
 
                 //flowa
                 using (var flowers = Image.Load(_imgs.RipOverlay.ToArray()))
                 {
-                    bg.Mutate(x => x.DrawImage(GraphicsOptions.Default,
-                        flowers,
-                        new Point(0, 0)));
+                    bg.Mutate(x => x.DrawImage(flowers, new Point(0, 0), new GraphicsOptions()));
                 }
 
                 return bg.ToStream().ToArray();
@@ -238,48 +226,79 @@ namespace NadekoBot.Modules.Searches.Services
             }
         }
 
-        public Task<TimeData> GetTimeDataAsync(string arg)
+        public Task<((string Address, DateTime Time, string TimeZoneName), TimeErrors?)> GetTimeDataAsync(string arg)
         {
-            return _cache.GetOrAddCachedDataAsync($"nadeko_time_{arg}",
-                GetTimeDataFactory,
-                arg,
-                TimeSpan.FromMinutes(5));
+            return GetTimeDataFactory(arg);
+            //return _cache.GetOrAddCachedDataAsync($"nadeko_time_{arg}",
+            //    GetTimeDataFactory,
+            //    arg,
+            //    TimeSpan.FromMinutes(1));
         }
-
-        private async Task<TimeData> GetTimeDataFactory(string arg)
+        private async Task<((string Address, DateTime Time, string TimeZoneName), TimeErrors?)> GetTimeDataFactory(string query)
         {
+            query = query.Trim();
+
+            if (string.IsNullOrEmpty(query))
+            {
+                return (default, TimeErrors.InvalidInput);
+            }
+
+            if (string.IsNullOrWhiteSpace(_creds.LocationIqApiKey)
+                || string.IsNullOrWhiteSpace(_creds.TimezoneDbApiKey))
+            {
+                return (default, TimeErrors.ApiKeyMissing);
+            }
+
             try
             {
-                using (var http = _httpFactory.CreateClient())
+                using (var _http = _httpFactory.CreateClient())
                 {
-                    var res = await http.GetStringAsync($"https://maps.googleapis.com/maps/api/geocode/json?address={arg}&key={_creds.GoogleApiKey}").ConfigureAwait(false);
-                    var obj = JsonConvert.DeserializeObject<GeolocationResult>(res);
-                    if (obj?.Results == null || obj.Results.Length == 0)
+                    var res = await _cache.GetOrAddCachedDataAsync($"geo_{query}", _ =>
                     {
-                        _log.Warn("Geocode lookup failed for {0}", arg);
-                        return null;
+                        var url = "https://eu1.locationiq.com/v1/search.php?" +
+                            (string.IsNullOrWhiteSpace(_creds.LocationIqApiKey) ? "key=" : $"key={_creds.LocationIqApiKey}&") +
+                            $"q={Uri.EscapeDataString(query)}&" +
+                            $"format=json";
+
+                        var res = _http.GetStringAsync(url);
+                        return res;
+                    }, "", TimeSpan.FromHours(1));
+
+                    var responses = JsonConvert.DeserializeObject<LocationIqResponse[]>(res);
+                    if (responses is null || responses.Length == 0)
+                    {
+                        _log.Warn("Geocode lookup failed for: {Query}", query);
+                        return (default, TimeErrors.NotFound);
                     }
-                    var currentSeconds = DateTime.UtcNow.UnixTimestamp();
-                    var timeRes = await http.GetStringAsync($"https://maps.googleapis.com/maps/api/timezone/json?location={obj.Results[0].Geometry.Location.Lat},{obj.Results[0].Geometry.Location.Lng}&timestamp={currentSeconds}&key={_creds.GoogleApiKey}").ConfigureAwait(false);
 
-                    var timeObj = JsonConvert.DeserializeObject<TimeZoneResult>(timeRes);
+                    var geoData = responses[0];
 
-                    var time = DateTime.UtcNow.AddSeconds(timeObj.DstOffset + timeObj.RawOffset);
-
-                    var toReturn = new TimeData
+                    using (var req = new HttpRequestMessage(HttpMethod.Get, "http://api.timezonedb.com/v2.1/get-time-zone?" +
+                        $"key={_creds.TimezoneDbApiKey}&format=json&" +
+                        "by=position&" +
+                        $"lat={geoData.Lat}&lng={geoData.Lon}"))
                     {
-                        Address = obj.Results[0].FormattedAddress,
-                        Time = time,
-                        TimeZoneName = timeObj.TimeZoneName,
-                    };
 
-                    return toReturn;
+                        using (var geoRes = await _http.SendAsync(req))
+                        {
+                            var resString = await geoRes.Content.ReadAsStringAsync();
+                            var timeObj = JsonConvert.DeserializeObject<TimeZoneResult>(resString);
+
+                            var time = new DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc).AddSeconds(timeObj.Timestamp);
+
+                            return ((
+                                Address: responses[0].DisplayName,
+                                Time: time,
+                                TimeZoneName: timeObj.TimezoneName
+                                ), default);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _log.Warn(ex);
-                return null;
+                _log.Error(ex, "Weather error: {Message}", ex.Message);
+                return (default, TimeErrors.NotFound);
             }
         }
 
@@ -531,10 +550,10 @@ namespace NadekoBot.Modules.Searches.Services
             using (var http = _httpFactory.CreateClient())
             {
                 http.DefaultRequestHeaders.Clear();
-                http.DefaultRequestHeaders.Add("X-Mashape-Key", _creds.MashapeKey);
+                http.DefaultRequestHeaders.Add("x-rapidapi-key", _creds.MashapeKey);
                 try
                 {
-                    var response = await http.GetStringAsync($"https://omgvamp-hearthstone-v1.p.mashape.com/" +
+                    var response = await http.GetStringAsync($"https://omgvamp-hearthstone-v1.p.rapidapi.com/" +
                         $"cards/search/{Uri.EscapeUriString(name)}").ConfigureAwait(false);
                     var objs = JsonConvert.DeserializeObject<HearthstoneCardData[]>(response);
                     if (objs == null || objs.Length == 0)
@@ -585,5 +604,127 @@ namespace NadekoBot.Modules.Searches.Services
                 return movie;
             }
         }
+
+        public async Task<int> GetSteamAppIdByName(string query)
+        {
+            var redis = _cache.Redis;
+            var db = redis.GetDatabase();
+            const string STEAM_GAME_IDS_KEY = "steam_names_to_appid";
+            var exists = await db.KeyExistsAsync(STEAM_GAME_IDS_KEY).ConfigureAwait(false);
+
+            // if we didn't get steam name to id map already, get it
+            //if (!exists)
+            //{
+            //    using (var http = _httpFactory.CreateClient())
+            //    {
+            //        // https://api.steampowered.com/ISteamApps/GetAppList/v2/
+            //        var gamesStr = await http.GetStringAsync("https://api.steampowered.com/ISteamApps/GetAppList/v2/").ConfigureAwait(false);
+            //        var apps = JsonConvert.DeserializeAnonymousType(gamesStr, new { applist = new { apps = new List<SteamGameId>() } }).applist.apps;
+
+            //        //await db.HashSetAsync("steam_game_ids", apps.Select(app => new HashEntry(app.Name.Trim().ToLowerInvariant(), app.AppId)).ToArray()).ConfigureAwait(false);
+            //        await db.StringSetAsync("steam_game_ids", gamesStr, TimeSpan.FromHours(24));
+            //        //await db.KeyExpireAsync("steam_game_ids", TimeSpan.FromHours(24), CommandFlags.FireAndForget).ConfigureAwait(false);
+            //    }
+            //}
+
+            var gamesMap = await _cache.GetOrAddCachedDataAsync(STEAM_GAME_IDS_KEY, async _ =>
+            {
+                using (var http = _httpFactory.CreateClient())
+                {
+                    // https://api.steampowered.com/ISteamApps/GetAppList/v2/
+                    var gamesStr = await http.GetStringAsync("https://api.steampowered.com/ISteamApps/GetAppList/v2/").ConfigureAwait(false);
+                    var apps = JsonConvert.DeserializeAnonymousType(gamesStr, new { applist = new { apps = new List<SteamGameId>() } }).applist.apps;
+
+                    return apps
+                        .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                        .GroupBy(x => x.Name)
+                        .ToDictionary(x => x.Key, x => x.First().AppId);
+                    //await db.HashSetAsync("steam_game_ids", apps.Select(app => new HashEntry(app.Name.Trim().ToLowerInvariant(), app.AppId)).ToArray()).ConfigureAwait(false);
+                    //await db.StringSetAsync("steam_game_ids", gamesStr, TimeSpan.FromHours(24));
+                    //await db.KeyExpireAsync("steam_game_ids", TimeSpan.FromHours(24), CommandFlags.FireAndForget).ConfigureAwait(false);
+                }
+            }, default(string), TimeSpan.FromHours(24));
+
+            if (gamesMap == null)
+                return -1;
+
+
+
+            query = query.Trim();
+
+            var keyList = gamesMap.Keys.ToList();
+
+            var key = keyList.FirstOrDefault(x => x.Equals(query, StringComparison.OrdinalIgnoreCase));
+
+            if (key == default)
+            {
+                key = keyList.FirstOrDefault(x => x.StartsWith(query, StringComparison.OrdinalIgnoreCase));
+                if (key == default)
+                    return -1;
+            }
+
+            return gamesMap[key];
+
+
+            //// try finding the game id
+            //var val = db.HashGet(STEAM_GAME_IDS_KEY, query);
+            //if (val == default)
+            //    return -1; // not found
+
+            //var appid = (int)val;
+            //return appid;
+
+            // now that we have appid, get the game info with that appid
+            //var gameData = await _cache.GetOrAddCachedDataAsync($"steam_game:{appid}", SteamGameDataFactory, appid, TimeSpan.FromHours(12))
+            //    .ConfigureAwait(false);
+
+            //return gameData;
+        }
+
+        //private async Task<SteamGameData> SteamGameDataFactory(int appid)
+        //{
+        //    using (var http = _httpFactory.CreateClient())
+        //    {
+        //        //  https://store.steampowered.com/api/appdetails?appids=
+        //        var responseStr = await http.GetStringAsync($"https://store.steampowered.com/api/appdetails?appids={appid}").ConfigureAwait(false);
+        //        var data = JsonConvert.DeserializeObject<Dictionary<int, SteamGameData.Container>>(responseStr);
+        //        if (!data.ContainsKey(appid) || !data[appid].Success)
+        //            return null; // for some reason we can't get the game with valid appid. SHould never happen
+
+        //        return data[appid].Data;
+        //    }
+        //}
+    }
+
+    public class SteamGameId
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+        [JsonProperty("appid")]
+        public int AppId { get; set; }
+    }
+
+    public class SteamGameData
+    {
+        public string ShortDescription { get; set; }
+
+        public class Container
+        {
+            [JsonProperty("success")]
+            public bool Success { get; set; }
+
+            [JsonProperty("data")]
+            public SteamGameData Data { get; set; }
+        }
+
+    }
+
+
+    public enum TimeErrors
+    {
+        InvalidInput,
+        ApiKeyMissing,
+        NotFound,
+        Unknown
     }
 }

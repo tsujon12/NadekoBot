@@ -32,6 +32,9 @@ namespace NadekoBot.Core.Services
         string BotListToken { get; }
         string TwitchClientId { get; }
         string RedisOptions { get; }
+        string LocationIqApiKey { get; }
+        string TimezoneDbApiKey { get; }
+        string CoinmarketcapApiKey { get; }
     }
 
     public class RestartConfig

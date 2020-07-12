@@ -2,14 +2,11 @@
 using System.IO;
 using System.Net.Http;
 using NadekoBot.Common;
-using NadekoBot.Extensions;
 using NadekoBot.Core.Services;
 using NLog;
-using SixLabors.Primitives;
 using Image = SixLabors.ImageSharp.Image;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Drawing;
 
 namespace NadekoBot.Modules.Games.Common
 {
@@ -25,7 +22,7 @@ namespace NadekoBot.Modules.Games.Common
 
         private readonly IHttpClientFactory _httpFactory;
 
-        public AsyncLazy<string> Url { get; }
+        public AsyncLazy<Stream> Stream { get; }
 
         public GirlRating(IImageCache images, IHttpClientFactory factory, double crazy, double hot, int roll, string advice)
         {
@@ -36,7 +33,7 @@ namespace NadekoBot.Modules.Games.Common
             Advice = advice; // convenient to have it here, even though atm there are only few different ones.
             _httpFactory = factory;
 
-            Url = new AsyncLazy<string>(async () =>
+            Stream = new AsyncLazy<Stream>(() =>
             {
                 try
                 {
@@ -51,25 +48,21 @@ namespace NadekoBot.Modules.Games.Common
 
                         using (var pointImg = Image.Load(_images.RategirlDot))
                         {
-                            img.Mutate(x => x.DrawImage(GraphicsOptions.Default, pointImg, new Point(pointx - 10, pointy - 10)));
+                            img.Mutate(x => x.DrawImage(pointImg, new Point(pointx - 10, pointy - 10), new GraphicsOptions()));
                         }
 
-                        string url;
-                        using (var http = _httpFactory.CreateClient())
-                        using (var imgStream = new MemoryStream())
-                        {
-                            img.SaveAsPng(imgStream);
-                            using (var byteContent = new ByteArrayContent(imgStream.ToArray()))
-                            {
-                                http.AddFakeHeaders();
+                        var imgStream = new MemoryStream();
+                        img.SaveAsPng(imgStream);
+                        return imgStream;
+                            //using (var byteContent = new ByteArrayContent(imgStream.ToArray()))
+                            //{
+                            //    http.AddFakeHeaders();
 
-                                using (var reponse = await http.PutAsync("https://transfer.sh/img.png", byteContent).ConfigureAwait(false))
-                                {
-                                    url = await reponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-                                }
-                            }
-                        }
-                        return url;
+                            //    using (var reponse = await http.PutAsync("https://transfer.sh/img.png", byteContent).ConfigureAwait(false))
+                            //    {
+                            //        url = await reponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            //    }
+                            //}
                     }
                 }
                 catch (Exception ex)

@@ -184,7 +184,14 @@ namespace NadekoBot.Modules.Help
                 IMessageChannel ch = channel is ITextChannel
                     ? await ((IGuildUser)ctx.User).GetOrCreateDMChannelAsync().ConfigureAwait(false)
                     : channel;
-                await ch.EmbedAsync(GetHelpStringEmbed()).ConfigureAwait(false);
+                try
+                {
+                    await ch.EmbedAsync(GetHelpStringEmbed()).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    await ReplyErrorLocalizedAsync("cant_dm").ConfigureAwait(false);
+                }
                 return;
             }
 
@@ -201,11 +208,11 @@ namespace NadekoBot.Modules.Help
             foreach (var com in _cmds.Commands.OrderBy(com => com.Module.GetTopLevelModule().Name).GroupBy(c => c.Aliases.First()).Select(g => g.First()))
             {
                 var module = com.Module.GetTopLevelModule();
-                string optHelpStr = null;
+                List<string> optHelpStr = null;
                 var opt = ((NadekoOptionsAttribute)com.Attributes.FirstOrDefault(x => x is NadekoOptionsAttribute))?.OptionType;
                 if (opt != null)
                 {
-                    optHelpStr = HelpService.GetCommandOptionHelp(opt);
+                    optHelpStr = HelpService.GetCommandOptionHelpList(opt);
                 }
                 var obj = new
                 {

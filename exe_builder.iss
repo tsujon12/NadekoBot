@@ -4,21 +4,30 @@
 #define platform "netcoreapp2.1"
 
 [Setup]
-AppName=NadekoBot
+AppName = {param:botname|NadekoBot}
 AppVersion={#version}
 AppPublisher=Kwoth
-DefaultDirName={commonpf}\NadekoBot
+DefaultDirName={param:installpath|{commonpf}\NadekoBot}
 DefaultGroupName=NadekoBot
 UninstallDisplayIcon={app}\{#sysfolder}\nadeko_icon.ico
 Compression=lzma2
 SolidCompression=yes
-OutputDir=userdocs:_projekti/NadekoInstallerOutput/{#version}/
+UsePreviousLanguage=no
+UsePreviousSetupType=no
+UsePreviousAppDir=no
+OutputDir=userdocs:_projekti/nadeko-installers/{#version}/
 OutputBaseFilename=nadeko-setup-{#version}
 AppReadmeFile=https://nadeko.bot/commands
 ArchitecturesInstallIn64BitMode=x64
-UsePreviousSetupType=no
-DisableWelcomePage=no
+DisableWelcomePage=yes
+DisableDirPage=yes
+DisableFinishedPage=yes
+DisableReadyMemo=yes
+DisableProgramGroupPage=yes
 WizardStyle=modern
+UpdateUninstallLogAppName=no
+CreateUninstallRegKey=no
+Uninstallable=no
 
 [Files]
 ;install 
@@ -41,9 +50,9 @@ Source: "src\NadekoBot\bin\Release\{#platform}\{#target}\publish\data\pokemon"; 
 Name:"{app}\{#sysfolder}\data"; Permissions: everyone-modify
 Name:"{app}\{#sysfolder}"; Permissions: everyone-modify
 
-[Run]
-Filename: "http://nadekobot.readthedocs.io/en/latest/jsons-explained/"; Flags: postinstall shellexec runasoriginaluser; Description: "Open setup guide"
-Filename: "{app}\{#sysfolder}\credentials.json"; Flags: postinstall shellexec runasoriginaluser; Description: "Open credentials file"
+; [Run]
+; Filename: "http://nadekobot.readthedocs.io/en/latest/jsons-explained/"; Flags: postinstall shellexec runasoriginaluser; Description: "Open setup guide"
+; Filename: "{app}\{#sysfolder}\credentials.json"; Flags: postinstall shellexec runasoriginaluser; Description: "Open credentials file"
 
 [Icons]
 ; for pretty install directory
@@ -52,48 +61,9 @@ Name: "{app}\credentials"; Filename: "{app}\{#sysfolder}\credentials.json"
 Name: "{app}\data"; Filename: "{app}\{#sysfolder}\data" 
 
 ; desktop shortcut 
-Name: "{commondesktop}\NadekoBot"; Filename: "{app}\NadekoBot"; Tasks: desktopicon
-; desktop icon checkbox
-[Tasks]
-Name: desktopicon; Description: "Create a &desktop shortcut";
+Name: "{commondesktop}\{#SetupSetting("AppName")}"; Filename: "{app}\NadekoBot";
 
-[Registry]
-;make the app run as administrator
-Root: "HKLM"; Subkey: "SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"; \
-    ValueType: String; ValueName: "{app}\{#sysfolder}\NadekoBot.exe"; ValueData: "RUNASADMIN"; \
-    Flags: uninsdeletekeyifempty uninsdeletevalue;
-Root: "HKCU"; Subkey: "SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"; \
-    ValueType: String; ValueName: "{app}\{#sysfolder}\NadekoBot.exe"; ValueData: "RUNASADMIN"; \
-    Flags: uninsdeletekeyifempty uninsdeletevalue;
-Root: "HKLM"; Subkey: "SOFTWARE\NadekoBot"; \
-    ValueType: String; ValueName: "InstallPath"; ValueData: "{app}\{#sysfolder}"; \
-    Flags: deletevalue uninsdeletekeyifempty uninsdeletevalue;
-Root: "HKLM"; Subkey: "SOFTWARE\NadekoBot"; \
-    ValueType: String; ValueName: "Version"; ValueData: "{#version}"; \
-    Flags: deletevalue uninsdeletekeyifempty uninsdeletevalue;
-
-[Messages]
-WelcomeLabel2=Hello, if you have any issues, join https://discord.nadeko.bot and ask for help in #help channel.%n%nIt is recommended that you CLOSE any ANTI VIRUS before continuing.
-
-;ask the user if they want to delete all settings
 [Code]
-var
-X: string;
-procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-begin
-  if CurUninstallStep = usPostUninstall then
-  begin
-    X := ExpandConstant('{app}');
-    if FileExists(X + '\{#sysfolder}\data\NadekoBot.db') then begin
-      if MsgBox('Do you want to delete all settings associated with this bot?', mbConfirmation, MB_YESNO) = IDYES then begin
-        DelTree(X + '\{#sysfolder}', True, True, True);
-      end
-    end else begin
-      MsgBox(X + '\{#sysfolder}\data\NadekoBot.db doesn''t exist', mbConfirmation, MB_YESNO)
-    end
-  end;
-end;
-
 function GetFileName(const AFileName: string): string;
 begin
   Result := ExpandConstant('{app}\{#sysfolder}\' + AFileName);

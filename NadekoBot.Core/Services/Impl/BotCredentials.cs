@@ -45,6 +45,9 @@ namespace NadekoBot.Core.Services.Impl
         public string VotesToken { get; }
         public string BotListToken { get; }
         public string RedisOptions { get; }
+        public string LocationIqApiKey { get; }
+        public string TimezoneDbApiKey { get; }
+        public string CoinmarketcapApiKey { get; }
 
         public BotCredentials()
         {
@@ -81,6 +84,13 @@ namespace NadekoBot.Core.Services.Impl
                 CleverbotApiKey = data[nameof(CleverbotApiKey)];
                 MiningProxyUrl = data[nameof(MiningProxyUrl)];
                 MiningProxyCreds = data[nameof(MiningProxyCreds)];
+                LocationIqApiKey = data[nameof(LocationIqApiKey)];
+                TimezoneDbApiKey = data[nameof(TimezoneDbApiKey)];
+                CoinmarketcapApiKey = data[nameof(CoinmarketcapApiKey)];
+                if(string.IsNullOrWhiteSpace(CoinmarketcapApiKey))
+                {
+                    CoinmarketcapApiKey = "e79ec505-0913-439d-ae07-069e296a6079";
+                }
                 if (!string.IsNullOrWhiteSpace(data[nameof(RedisOptions)]))
                     RedisOptions = data[nameof(RedisOptions)];
                 else
@@ -149,7 +159,10 @@ namespace NadekoBot.Core.Services.Impl
 
         }
 
-        private class CredentialsModel
+        /// <summary>
+        /// No idea why this thing exists
+        /// </summary>
+        private class CredentialsModel : IBotCredentials
         {
             public ulong ClientId { get; set; } = 123123123;
             public string Token { get; set; } = "";
@@ -178,6 +191,20 @@ namespace NadekoBot.Core.Services.Impl
             public string VotesToken { get; set; }
             public string VotesUrl { get; set; }
             public string RedisOptions { get; set; } = "{Host}:{Port}, name={User}, password={Password}, syncTimeout=100000";
+            public string LocationIqApiKey { get; set; }
+            public string TimezoneDbApiKey { get; set; }
+            public string CoinmarketcapApiKey { get; set; }
+
+            [JsonIgnore]
+            ImmutableArray<ulong> IBotCredentials.OwnerIds => throw new NotImplementedException();
+
+            [JsonIgnore]
+            RestartConfig IBotCredentials.RestartCommand => throw new NotImplementedException();
+
+            public bool IsOwner(IUser u)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         public bool IsOwner(IUser u) => OwnerIds.Contains(u.Id);

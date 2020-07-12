@@ -2,21 +2,23 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NadekoBot.Core.Services.Database;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace NadekoBot.Migrations
 {
     [DbContext(typeof(NadekoContext))]
-    partial class NadekoContextModelSnapshot : ModelSnapshot
+    [Migration("20200623195238_cr-reactions")]
+    partial class crreactions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "2.1.3-rtm-32065")
+                .HasAnnotation("ProductVersion", "2.1.1-rtm-30846")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn)
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn);
@@ -595,26 +597,6 @@ namespace NadekoBot.Migrations
                     b.ToTable("FilteredWord");
                 });
 
-            modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.FilterLinksChannelId", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn)
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn);
-
-                    b.Property<ulong>("ChannelId");
-
-                    b.Property<DateTime?>("DateAdded");
-
-                    b.Property<int?>("GuildConfigId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GuildConfigId");
-
-                    b.ToTable("FilterLinksChannelId");
-                });
-
             modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.FollowedStream", b =>
                 {
                     b.Property<int>("Id")
@@ -727,8 +709,6 @@ namespace NadekoBot.Migrations
 
                     b.Property<bool>("FilterInvites");
 
-                    b.Property<bool>("FilterLinks");
-
                     b.Property<bool>("FilterWords");
 
                     b.Property<ulong?>("GameVoiceChannel");
@@ -765,10 +745,6 @@ namespace NadekoBot.Migrations
 
                     b.Property<bool>("VoicePlusTextEnabled");
 
-                    b.Property<int>("WarnExpireAction");
-
-                    b.Property<int>("WarnExpireHours");
-
                     b.Property<bool>("WarningsInitialized");
 
                     b.HasKey("Id");
@@ -779,8 +755,6 @@ namespace NadekoBot.Migrations
                     b.HasIndex("LogSettingId");
 
                     b.HasIndex("RootPermissionId");
-
-                    b.HasIndex("WarnExpireHours");
 
                     b.ToTable("GuildConfigs");
                 });
@@ -1671,30 +1645,6 @@ namespace NadekoBot.Migrations
                     b.ToTable("UnmuteTimer");
                 });
 
-            modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.UnroleTimer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn)
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn);
-
-                    b.Property<DateTime?>("DateAdded");
-
-                    b.Property<int?>("GuildConfigId");
-
-                    b.Property<ulong>("RoleId");
-
-                    b.Property<DateTime>("UnbanAt");
-
-                    b.Property<ulong>("UserId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GuildConfigId");
-
-                    b.ToTable("UnroleTimer");
-                });
-
             modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.UserXpStats", b =>
                 {
                     b.Property<int>("Id")
@@ -1886,8 +1836,6 @@ namespace NadekoBot.Migrations
 
                     b.Property<int>("Punishment");
 
-                    b.Property<ulong?>("RoleId");
-
                     b.Property<int>("Time");
 
                     b.HasKey("Id");
@@ -2018,7 +1966,7 @@ namespace NadekoBot.Migrations
                     b.HasOne("NadekoBot.Core.Services.Database.Models.DiscordUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.ClubBans", b =>
@@ -2031,7 +1979,7 @@ namespace NadekoBot.Migrations
                     b.HasOne("NadekoBot.Core.Services.Database.Models.DiscordUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.ClubInfo", b =>
@@ -2107,13 +2055,6 @@ namespace NadekoBot.Migrations
                 {
                     b.HasOne("NadekoBot.Core.Services.Database.Models.GuildConfig")
                         .WithMany("FilteredWords")
-                        .HasForeignKey("GuildConfigId");
-                });
-
-            modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.FilterLinksChannelId", b =>
-                {
-                    b.HasOne("NadekoBot.Core.Services.Database.Models.GuildConfig")
-                        .WithMany("FilterLinksChannelIds")
                         .HasForeignKey("GuildConfigId");
                 });
 
@@ -2326,13 +2267,6 @@ namespace NadekoBot.Migrations
                 {
                     b.HasOne("NadekoBot.Core.Services.Database.Models.GuildConfig")
                         .WithMany("UnmuteTimers")
-                        .HasForeignKey("GuildConfigId");
-                });
-
-            modelBuilder.Entity("NadekoBot.Core.Services.Database.Models.UnroleTimer", b =>
-                {
-                    b.HasOne("NadekoBot.Core.Services.Database.Models.GuildConfig")
-                        .WithMany("UnroleTimer")
                         .HasForeignKey("GuildConfigId");
                 });
 
