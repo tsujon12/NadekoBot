@@ -17,7 +17,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public IEnumerable<Quote> GetGroup(ulong guildId, int page, OrderType order)
         {
-            var q = _set.Where(x => x.GuildId == guildId);
+            var q = _set.AsQueryable().Where(x => x.GuildId == guildId);
             if (order == OrderType.Keyword)
                 q = q.OrderBy(x => x.Keyword);
             else
@@ -26,25 +26,33 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
             return q.Skip(15 * page).Take(15).ToArray();
         }
 
-        public Task<Quote> GetRandomQuoteByKeywordAsync(ulong guildId, string keyword)
+        public async Task<Quote> GetRandomQuoteByKeywordAsync(ulong guildId, string keyword)
         {
             var rng = new NadekoRandom();
-            return _set.Where(q => q.GuildId == guildId && q.Keyword == keyword).OrderBy(q => rng.Next())
-                .FirstOrDefaultAsync();
+            return (await _set.AsQueryable()
+                .Where(q => q.GuildId == guildId && q.Keyword == keyword)
+                .ToListAsync())
+                .OrderBy(q => rng.Next())
+                .FirstOrDefault();
         }
 
-        public Task<Quote> SearchQuoteKeywordTextAsync(ulong guildId, string keyword, string text)
+        public async Task<Quote> SearchQuoteKeywordTextAsync(ulong guildId, string keyword, string text)
         {
             var rngk = new NadekoRandom();
-            return _set.Where(q => q.Text.ContainsNoCase(text, StringComparison.OrdinalIgnoreCase)
-                && q.GuildId == guildId && q.Keyword == keyword)
+            return (await _set.AsQueryable()
+                .Where(q => q.GuildId == guildId
+                            && q.Keyword == keyword
+                            && EF.Functions.Like(q.Text.ToUpper(), $"%{text.ToUpper()}%")
+                            // && q.Text.Contains(text, StringComparison.OrdinalIgnoreCase)
+                            )
+                .ToListAsync())
                 .OrderBy(q => rngk.Next())
-                .FirstOrDefaultAsync();
+                .FirstOrDefault();
         }
 
         public void RemoveAllByKeyword(ulong guildId, string keyword)
         {
-            _set.RemoveRange(_set.Where(x => x.GuildId == guildId && x.Keyword.ToUpperInvariant() == keyword));
+            _set.RemoveRange(_set.AsQueryable().Where(x => x.GuildId == guildId && x.Keyword.ToUpper() == keyword));
         }
 
     }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -41,9 +39,9 @@ namespace NadekoBot.Core.Modules.Administration.Services
         {
             if (type == DatabaseTypeEnum.PostgreSql)
             {
-                return "UPDATE \"DiscordUser\" SET \"CurrencyAmount\"=0; DELETE FROM \"CurrencyTransactions\";";
+                return "UPDATE \"DiscordUser\" SET \"CurrencyAmount\"=0; DELETE FROM \"CurrencyTransactions\"; DELETE FROM \"PlantedCurrency\";";
             }
-            return "UPDATE DiscordUser SET CurrencyAmount=0; DELETE FROM CurrencyTransactions;";
+            return "UPDATE DiscordUser SET CurrencyAmount=0; DELETE FROM CurrencyTransactions; DELETE FROM \"PlantedCurrency\";";
         }
 
         public static string MusicPlaylistDeleteSql(DatabaseTypeEnum type)
@@ -90,7 +88,6 @@ namespace NadekoBot.Core.Modules.Administration.Services
         {
             _db = db;
         }
-
         internal DatabaseTypeEnum GetDbType => _db.GetDatabaseType();
 
         public async Task<int> ExecuteSql(string sql)
@@ -98,7 +95,7 @@ namespace NadekoBot.Core.Modules.Administration.Services
             int res;
             using (var uow = _db.GetDbContext())
             {
-                res = await uow._context.Database.ExecuteSqlCommandAsync(sql);
+                res = await uow._context.Database.ExecuteSqlRawAsync(sql);
             }
             return res;
         }

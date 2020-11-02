@@ -21,13 +21,16 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
                             .Include(wi => wi.Claimer)
                             .Include(wi => wi.Items)
                             .FirstOrDefault(wi => wi.WaifuId == _context.Set<DiscordUser>()
+                                .AsQueryable()
                                 .Where(x => x.UserId == userId)
                                 .Select(x => x.Id)
                                 .FirstOrDefault());
             }
 
             return includes(_set)
+                .AsQueryable()
                 .FirstOrDefault(wi => wi.WaifuId == _context.Set<DiscordUser>()
+                    .AsQueryable()
                     .Where(x => x.UserId == userId)
                     .Select(x => x.Id)
                     .FirstOrDefault());
@@ -35,14 +38,16 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public IEnumerable<string> GetWaifuNames(ulong userId)
         {
-            var waifus = _set.Where(x => x.ClaimerId != null &&
+            var waifus = _set.AsQueryable().Where(x => x.ClaimerId != null &&
                 x.ClaimerId == _context.Set<DiscordUser>()
+                    .AsQueryable()
                     .Where(y => y.UserId == userId)
                     .Select(y => y.Id)
                     .FirstOrDefault())
                 .Select(x => x.WaifuId);
 
             return _context.Set<DiscordUser>()
+                .AsQueryable()
                 .Where(x => waifus.Contains(x.Id))
                 .Select(x => x.Username + "#" + x.Discriminator)
                 .ToList();
@@ -79,6 +84,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
         public decimal GetTotalValue()
         {
             return _set
+                .AsQueryable()
                 .Where(x => x.ClaimerId != null)
                 .Sum(x => x.Price);
         }
@@ -92,7 +98,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
             if (_context.Database.IsNpgsql())
             {
                 return _context.Set<WaifuUpdate>()
-                    .FromSql($@"SELECT 1 
+                    .FromSqlInterpolated($@"SELECT 1 
                             FROM ""WaifuUpdates""
                             WHERE ""UserId"" = (SELECT ""Id"" from ""DiscordUser"" WHERE ""UserId""={userId}) AND 
                             ""UpdateType"" = 0 AND 
@@ -100,11 +106,10 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
                     .Count();
             }
 
-
             if (_context.Database.IsSqlServer())
             {
                 return _context.Set<WaifuUpdate>()
-                    .FromSql($@"SELECT 1 
+                    .FromSqlInterpolated($@"SELECT 1 
                             FROM WaifuUpdates
                             WHERE UserId = (SELECT Id from DiscordUser WHERE UserId={userId}) AND 
                             UpdateType = 0 AND 
@@ -119,7 +124,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
         {
             if (_context.Database.IsNpgsql())
             {
-                _context.Database.ExecuteSqlCommand($@"
+                _context.Database.ExecuteSqlInterpolated($@"
                     INSERT INTO ""WaifuInfo"" (""AffinityId"", ""ClaimerId"", ""Price"", ""WaifuId"")
                     VALUES ({null}, {null}, {1}, (SELECT ""Id"" FROM ""DiscordUser"" WHERE ""UserId""={userId}))
                     ON CONFLICT (""WaifuId"") DO NOTHING;");
@@ -128,57 +133,65 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
             if (_context.Database.IsSqlServer())
             {
                 IQueryable<DiscordUser> userQueryable = _context.Set<DiscordUser>()
-                    .FromSql($@"SELECT * FROM DiscordUser WHERE UserId={userId}");
+                    .FromSqlInterpolated($@"SELECT * FROM DiscordUser WHERE UserId={userId}");
 
                 DiscordUser user = userQueryable.FirstOrDefault();
                 if (user != null)
                 {
-                    _context.Database.ExecuteSqlCommand($@"
+                    _context.Database.ExecuteSqlInterpolated($@"
                         INSERT INTO WaifuInfo WITH (ROWLOCK) (AffinityId, ClaimerId, Price, WaifuId)
                         SELECT null, null, 1, {user.Id}
                         WHERE NOT EXISTS (SELECT * FROM WaifuInfo WHERE WaifuId={user.Id});");
                 }
             }
 
-            return _set
+            var toReturn = _set.AsQueryable()
                 .Where(w => w.WaifuId == _context.Set<DiscordUser>()
+                    .AsQueryable()
                     .Where(u => u.UserId == userId)
                     .Select(u => u.Id).FirstOrDefault())
                 .Select(w => new WaifuInfoStats
                 {
                     FullName = _context.Set<DiscordUser>()
+                        .AsQueryable()
                         .Where(u => u.UserId == userId)
                         .Select(u => u.Username + "#" + u.Discriminator)
                         .FirstOrDefault(),
 
-                    AffinityCount = _context
-                        .Set<WaifuUpdate>()
-                        .Count(x => x.UserId == w.WaifuId &&
+                    AffinityCount = _context.Set<WaifuUpdate>()
+                        .AsQueryable()
+                        .Where(x => x.UserId == w.WaifuId &&
                             x.UpdateType == WaifuUpdateType.AffinityChanged &&
-                            x.NewId != null),
+                            x.NewId != null)
+                        .Count(),
 
                     AffinityName = _context.Set<DiscordUser>()
+                        .AsQueryable()
                         .Where(u => u.Id == w.AffinityId)
                         .Select(u => u.Username + "#" + u.Discriminator)
                         .FirstOrDefault(),
 
-                    ClaimCount = _set
-                        .Count(x => x.ClaimerId == w.WaifuId),
+                    ClaimCount = _set.AsQueryable()
+                        .Where(x => x.ClaimerId == w.WaifuId)
+                        .Count(),
 
                     ClaimerName = _context.Set<DiscordUser>()
+                        .AsQueryable()
                         .Where(u => u.Id == w.ClaimerId)
                         .Select(u => u.Username + "#" + u.Discriminator)
                         .FirstOrDefault(),
 
-                    DivorceCount = _context
-                        .Set<WaifuUpdate>()
-                            .Count(x => x.OldId == w.WaifuId &&
+                    DivorceCount = _context.Set<WaifuUpdate>()
+                        .AsQueryable()
+                        .Where(x => x.OldId == w.WaifuId &&
                             x.NewId == null &&
-                            x.UpdateType == WaifuUpdateType.Claimed),
+                            x.UpdateType == WaifuUpdateType.Claimed)
+                            .Count(),
 
                     Price = w.Price,
 
                     Claims30 = _set
+                        .AsQueryable()
                         .Include(x => x.Waifu)
                         .Where(x => x.ClaimerId == w.WaifuId)
                         .Select(x => x.Waifu.Username + "#" + x.Waifu.Discriminator)
@@ -187,10 +200,19 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
                         .ToList(),
 
                     Items = _context.Set<WaifuItem>()
+                        .AsQueryable()
                         .Where(x => x.WaifuInfoId == w.Id)
                         .ToList(),
                 })
             .FirstOrDefault();
+            if (toReturn is null)
+                return null;
+            
+            toReturn.Claims30 = toReturn.Claims30 is null
+                ? new List<string>()
+                : toReturn.Claims30.OrderBy(x => Guid.NewGuid()).Take(30).ToList(); 
+            
+            return toReturn;
         }
     }
 }

@@ -125,7 +125,7 @@
   },
   "repeat": {
     "Cmd": "repeat",
-    "Desc": "Repeat a message every specified number of minutes in the current channel. You can instead specify time of day for the message to be repeated at daily (make sure you've set your server's timezone). You can have up to 5 repeating messages on the server in total.",
+    "Desc": "Repeat a message once every `-i` number of minutes in the current channel. You can instead specify time of day for the message to be repeated daily (make sure you've set your server's timezone). If you've specified time of day, you can still override the default daily interval with your own -i. For example `17:30 -i 180 -m \"hi there\"` will post at 17:30 and then every 3 hours after. You can have up to 5 repeating messages on the server in total.",
     "Usage": [
       "{0}repeat -i 5 -m \"Hello there\" -n",
       "{0}repeat 17:30 -m \"tea time\""
@@ -782,8 +782,9 @@
   },
   "verbose": {
     "Cmd": "verbose v",
-    "Desc": "Sets whether to show when a command/module is blocked.",
+    "Desc": "Toggles or sets whether to show when a command/module is blocked.",
     "Usage": [
+      "{0}v",
       "{0}verbose true"
     ]
   },
@@ -1458,61 +1459,46 @@
       "{0}lolchamp Annie sup"
     ]
   },
-  "lolban": {
-    "Cmd": "lolban",
-    "Desc": "Shows top banned champions ordered by ban rate.",
+  "streamadd": {
+    "Cmd": "streamadd sta stadd",
+    "Desc": "Notifies this channel when the stream on the specified URL goes online or offline. Offline notifications will only show if you enable `{0}streamoff`. Maximum 10 per server.",
     "Usage": [
-      "{0}lolban"
-    ]
-  },
-  "smashcast": {
-    "Cmd": "smashcast hb",
-    "Desc": "Notifies this channel when the specified user starts streaming.",
-    "Usage": [
-      "{0}smashcast SomeStreamer"
-    ]
-  },
-  "twitch": {
-    "Cmd": "twitch tw",
-    "Desc": "Notifies this channel when the specified user starts streaming.",
-    "Usage": [
-      "{0}twitch SomeStreamer"
-    ]
-  },
-  "picarto": {
-    "Cmd": "picarto pa",
-    "Desc": "Notifies this channel when the specified user starts streaming.",
-    "Usage": [
-      "{0}picarto SomeStreamer"
-    ]
-  },
-  "mixer": {
-    "Cmd": "mixer bm",
-    "Desc": "Notifies this channel when the specified user starts streaming.",
-    "Usage": [
-      "{0}mixer SomeStreamer"
+      "{0}sta twitch.tv/someguy"
     ]
   },
   "streamremove": {
-    "Cmd": "streamremove strm",
-    "Desc": "Removes notifications of a specified stream on the specified platform on this channel. You can also just specify an url.",
+    "Cmd": "streamrm strm",
+    "Desc": "Stops following the stream on the specified index. (use `{0}stl` to see indexes)",
     "Usage": [
-      "{0}strm Twitch SomeGuy",
-      "{0}strm twitch.tv/someguy"
+      "{0}strm 2"
     ]
   },
-  "streamadd": {
-    "Cmd": "streamadd stadd",
-    "Desc": "Notifies this channel when the user's stream on the specified URL goes online or offline.",
+  "streamlist": {
+    "Cmd": "streamlist stl streamslist",
+    "Desc": "Lists all streams you are following on this server and their respective indexes.",
     "Usage": [
-      "{0}stadd twitch.tv/someguy"
+      "{0}stl"
     ]
   },
-  "liststreams": {
-    "Cmd": "liststreams ls",
-    "Desc": "Lists all streams you are following on this server.",
+  "streamoffline": {
+    "cmd": "streamoff sto stoff",
+    "desc": "Toggles whether the bot will also notify when added streams go offline.",
+    "usage": [
+      "{0}sto"
+    ]
+  },
+  "streammessage": {
+    "cmd": "streammsg stm stmsg",
+    "desc": "Sets the message which will show when the stream on the specified index comes online.",
+    "usage": [
+      "{0}stm 1 Hey @erryone i'm back online!1!!"
+    ]
+  },
+  "streamcheck": {
+    "Cmd": "streamcheck stc",
+    "Desc": "Retrieves information about a stream.",
     "Usage": [
-      "{0}ls"
+      "{0}cs https://twitch.tv/somedude"
     ]
   },
   "convert": {
@@ -1545,17 +1531,18 @@
   },
   "osu": {
     "Cmd": "osu",
-    "Desc": "Shows osu stats for a player.",
+    "Desc": "Shows osu! stats for a player.",
     "Usage": [
       "{0}osu Name",
       "{0}osu Name taiko"
     ]
   },
-  "osub": {
-    "Cmd": "osub",
-    "Desc": "Shows information about an osu beatmap.",
+  "gatari": {
+    "Cmd": "gatari",
+    "Desc": "Shows osu!gatari stats for a player.",
     "Usage": [
-      "{0}osub https://osu.ppy.sh/s/127712"
+      "{0}gatari Name",
+      "{0}gatari Name ctb"
     ]
   },
   "osu5": {
@@ -1942,13 +1929,6 @@
       "{0}migratedata"
     ]
   },
-  "checkstream": {
-    "Cmd": "checkstream cs",
-    "Desc": "Checks if a user is online on a certain streaming platform.",
-    "Usage": [
-      "{0}cs twitch MyFavStreamer"
-    ]
-  },
   "showemojis": {
     "Cmd": "showemojis se",
     "Desc": "Shows a name and a link to every SPECIAL emoji in the message.",
@@ -2142,7 +2122,7 @@
   },
   "hentaibomb": {
     "Cmd": "hentaibomb",
-    "Desc": "Shows a total 5 images (from gelbooru, danbooru, konachan, yandere and atfbooru). Tag is optional but preferred.",
+    "Desc": "Shows a total 5 images (from gelbooru, danbooru, konachan and yandere). Tag is optional but preferred.",
     "Usage": [
       "{0}hentaibomb yuri"
     ]
@@ -2368,7 +2348,7 @@
     ]
   },
   "repeatlist": {
-    "Cmd": "repeatlist replst",
+    "Cmd": "repeatlist replst replist repli",
     "Desc": "Shows currently repeating messages and their indexes.",
     "Usage": [
       "{0}repeatlist"
@@ -2434,8 +2414,8 @@
     ]
   },
   "slot": {
-    "Cmd": "slot",
-    "Desc": "Play Nadeko slots. Max bet is 9999. 1.5 second cooldown per user.",
+    "Cmd": "slot slots",
+    "Desc": "Play Nadeko slots. 1 second cooldown per user.",
     "Usage": [
       "{0}slot 5"
     ]
@@ -2905,9 +2885,10 @@
   },
   "verboseerror": {
     "Cmd": "verboseerror ve",
-    "Desc": "Toggles whether the bot should print command errors when a command is incorrectly used.",
+    "Desc": "Toggles or sets whether the bot should print command errors when a command is incorrectly used.",
     "Usage": [
-      "{0}ve"
+      "{0}ve",
+      "{0}ve false"
     ]
   },
   "streamrolekeyword": {
@@ -3271,6 +3252,13 @@
       "{0}rafflecur mixed 15"
     ]
   },
+  "rip": {
+    "cmd": "rip",
+    "desc": "Shows the inevitable fate of someone.",
+    "usage": [
+      "{0}rip @Someone"
+    ]
+  },
   "autodisconnect": {
     "cmd": "autodisconnect autodc",
     "desc": "Toggles whether the bot should disconnect from the voice channel once it's done playing all of the songs.",
@@ -3425,9 +3413,20 @@
   },
   "edit": {
     "cmd": "edit",
-    "desc": "Edits bot's message, you have to specify message ID and new text. Supports embeds.",
+    "desc": "Edits bot's message, you have to specify message ID and new text. You can optionally specify target channel. Supports embeds.",
     "usage": [
-      "{0}edit 7479498384 Hi :^)"
+      "{0}edit 7479498384 Hi :^)",
+      "{0}edit #other-channel 771562360594628608 New message!",
+      "{0}edit #other-channel 771562360594628608 {\"description\":\"hello\"}"
+    ]
+  },
+  "delete": {
+    "cmd": "delete del",
+    "desc": "Deletes a single message given the channel and message ID. If channel is ommited, message will be searched for in the current channel. You can also specify time parameter after which the message will be deleted (up to 7 days). This timer won't persist through bot restarts.",
+    "usage": [
+      "{0}del #chat 771562360594628608",
+      "{0}del 771562360594628608",
+      "{0}del 771562360594628608 5m"
     ]
   },
   "roleid": {
@@ -3437,26 +3436,19 @@
       "{0}rid Some Role"
     ]
   },
-  "streamoffline": {
-    "cmd": "streamoff stoff",
-    "desc": "Toggles whether the bot will notify about streams going offline.",
-    "usage": [
-      "{0}stoff"
-    ]
-  },
-  "streammessage": {
-    "cmd": "streammsg",
-    "desc": "Specify an url of a stream you're already following, and a message in order to set a stream notification message which will show up every time stream comes online.",
-    "usage": [
-      "{0}streammsg https://www.twitch.tv/trolhamonas/ Hello world"
-    ]
-  },
   "updatescheck": {
     "cmd": "updatescheck",
     "desc": "Select which kind of updates you want to be notified of every 8 hours. You can specify 'release' to check only for new windows releases, 'commit' to be notified of new commits, or 'none' to not get notified.",
     "usage": [
       "{0}updatescheck commit",
       "{0}updatescheck release"
+    ]
+  },
+  "nsfwtoggle": {
+    "cmd": "nsfwtoggle nsfw nsfwtgl",
+    "desc": "Toggles the NSFW parameter of the current text channel.",
+    "usage": [
+      "{0}nsfwtoggle"
     ]
   },
   "economy": {

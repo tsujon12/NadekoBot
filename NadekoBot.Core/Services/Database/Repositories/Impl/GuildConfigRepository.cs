@@ -32,23 +32,9 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
         private IQueryable<GuildConfig> IncludeEverything()
         {
             return _set
-                .Include(gc => gc.LogSetting)
-                    .ThenInclude(ls => ls.IgnoredChannels)
-                .Include(gc => gc.MutedUsers)
-                .Include(gc => gc.CommandAliases)
-                .Include(gc => gc.UnmuteTimers)
-                .Include(gc => gc.UnroleTimer)
-                .Include(gc => gc.UnbanTimer)
-                .Include(gc => gc.VcRoleInfos)
-                .Include(gc => gc.GenerateCurrencyChannelIds)
-                .Include(gc => gc.FilterInvitesChannelIds)
-                .Include(gc => gc.FilterWordsChannelIds)
-                .Include(gc => gc.FilteredWords)
+                .AsQueryable()
                 .Include(gc => gc.CommandCooldowns)
                 .Include(gc => gc.GuildRepeaters)
-                .Include(gc => gc.AntiRaidSetting)
-                .Include(gc => gc.AntiSpamSetting)
-                    .ThenInclude(x => x.IgnoredChannels)
                 .Include(gc => gc.FeedSubs)
                     .ThenInclude(x => x.GuildConfig)
                 .Include(gc => gc.FollowedStreams)
@@ -59,7 +45,8 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
                 .Include(gc => gc.MusicSettings)
                 .Include(gc => gc.DelMsgOnCmdChannels)
                 .Include(gc => gc.ReactionRoleMessages)
-                    .ThenInclude(x => x.ReactionRoles);
+                    .ThenInclude(x => x.ReactionRoles)
+                ;
         }
 
         /// <summary>
@@ -106,9 +93,11 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public GuildConfig LogSettingsFor(ulong guildId)
         {
-            var config = _set.Include(gc => gc.LogSetting)
-                            .ThenInclude(gc => gc.IgnoredChannels)
-               .FirstOrDefault(x => x.GuildId == guildId);
+            var config = _set
+                .AsQueryable()
+                .Include(gc => gc.LogSetting)
+                    .ThenInclude(gc => gc.IgnoredChannels)
+                .FirstOrDefault(x => x.GuildId == guildId);
 
             if (config == null)
             {
@@ -132,7 +121,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public IEnumerable<GuildConfig> Permissionsv2ForAll(List<ulong> include)
         {
-            var query = _set
+            var query = _set.AsQueryable()
                 .Where(x => include.Contains(x.GuildId))
                 .Include(gc => gc.Permissions);
 
@@ -141,7 +130,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public GuildConfig GcWithPermissionsv2For(ulong guildId)
         {
-            var config = _set
+            var config = _set.AsQueryable()
                 .Where(gc => gc.GuildId == guildId)
                 .Include(gc => gc.Permissions)
                 .FirstOrDefault();
@@ -167,6 +156,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
         public IEnumerable<FollowedStream> GetFollowedStreams()
         {
             return _set
+                .AsQueryable()
                 .Include(x => x.FollowedStreams)
                 .SelectMany(gc => gc.FollowedStreams)
                 .ToArray();
@@ -174,7 +164,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public IEnumerable<FollowedStream> GetFollowedStreams(List<ulong> included)
         {
-            return _set
+            return _set.AsQueryable()
                 .Where(gc => included.Contains(gc.GuildId))
                 .Include(gc => gc.FollowedStreams)
                 .SelectMany(gc => gc.FollowedStreams)
@@ -210,6 +200,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
         public IEnumerable<GeneratingChannel> GetGeneratingChannels()
         {
             return _set
+                .AsQueryable()
                 .Include(x => x.GenerateCurrencyChannelIds)
                 .Where(x => x.GenerateCurrencyChannelIds.Any())
                 .SelectMany(x => x.GenerateCurrencyChannelIds)

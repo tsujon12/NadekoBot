@@ -59,10 +59,18 @@ namespace NadekoBot.Modules.Gambling.Services
             _client = client;
 
             cmd.OnMessageNoTrigger += PotentialFlowerGeneration;
-
-            _generationChannels = new ConcurrentHashSet<ulong>(bot
-                .AllGuildConfigs
-                .SelectMany(c => c.GenerateCurrencyChannelIds.Select(obj => obj.ChannelId)));
+            using (var uow = db.GetDbContext())
+            {
+                var guildIds = client.Guilds.Select(x => x.Id).ToList();
+                var configs = uow._context.Set<GuildConfig>()
+                    .AsQueryable()
+                    .Include(x => x.GenerateCurrencyChannelIds)
+                    .Where(x => guildIds.Contains(x.GuildId))
+                    .ToList();
+                
+                _generationChannels = new ConcurrentHashSet<ulong>(configs
+                    .SelectMany(c => c.GenerateCurrencyChannelIds.Select(obj => obj.ChannelId)));
+            }
         }
 
         private string GetText(ulong gid, string key, params object[] rep)
@@ -246,7 +254,7 @@ namespace NadekoBot.Modules.Gambling.Services
             // generate a number from 1000 to ffff
             var num = _rng.Next(4096, 65536);
             // convert it to hexadecimal
-            return num.ToString("X");
+            return num.ToString("x4");
         }
 
         public async Task<long> PickAsync(ulong gid, ITextChannel ch, ulong uid, string pass)

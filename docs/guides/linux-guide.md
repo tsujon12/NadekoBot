@@ -9,7 +9,6 @@
 | [Running Nadeko on tmux]                            |
 | [Making Nadeko persist upon system restarts (tmux)] |
 | [Setting up Nadeko on a VPS (Digital Ocean)]        |
-| [Setting up WinSCP]                                 |
 
 #### Operating System Compatibility
 
@@ -59,7 +58,7 @@ Once it finishes, the installer should automatically take you back to the main m
 #### Installing Nadeko
 
 - Choose Option `1` to get the **most updated build of NadekoBot**. When the installation is complete, you will see the options again.
-- If you haven't [set up your Discord bot application](../../jsons-explained/#creating-discord-bot-application) and [invited the bot to your server](../../jsons-explained/#inviting-your-bot-to-your-server) yet, do it now.
+- If you haven't [set up your Discord bot application](../../create-invite/#creating-discord-bot-application) and [invited the bot to your server](../../create-invite/#inviting-your-bot-to-your-server) yet, do it now.
     - Only the ClientID, Bot Token and OwnerID are required. Everything else is optional.
     - The Google API Key is required if you want Nadeko to play music.
 - Once you have acquired them, choose Option `5` to set up your credentials.
@@ -242,7 +241,7 @@ If you want Nadeko to play music for you 24/7 without having to hosting it on yo
 **Setting up NadekoBot**
 Assuming you have followed the link above to setup an account and a Droplet with a 64-bit operational system on Digital Ocean and got the `IP address and root password (in your e-mail)` to login, it's time to get started.
 
-**Go through this whole guide before setting up Nadeko**
+**This section is only relevant to those who want to host Nadeko on DigitalOcean. Go through this whole section before setting the bot up.**
 
 #### Prerequisites
 
@@ -266,19 +265,6 @@ If you are running your droplet for the first time, it will most likely ask you 
 
 After that, your droplet should be ready for use. [Follow the guide from the beginning](#getting-started) to set Nadeko up on your newly created VPS.
 
-##### Setting up WinSCP
-
-WinSCP is useful for transfering files between a local system (your computer) and a remote system (your VPS). To set it up:
-
-- Open **WinSCP**
-- Click on **New Site** (top-left corner).
-- On the right-hand side, you should see **File Protocol** above a drop-down selection menu.
-- Select **SFTP** *(SSH File Transfer Protocol)* if its not already selected.
-- Now, in **Host name:** paste or type in your `Digital Ocean Droplets IP address` and leave `Port: 22` (no need to change it).
-- In **Username:** type `root`
-- In **Password:** type `the new root password (you changed at the start)`
-- Click on **Login**, it should connect.
-- If everything goes well, you should see the NadekoBot folder which was created by Git earlier on the right-hand side window. You should now be able to download and upload files to your VPS.
 
 [Getting Started]: #getting-started
 [Downloading and Installing the Prerequisites]: #downloading-and-installing-the-prerequisites
@@ -287,4 +273,3 @@ WinSCP is useful for transfering files between a local system (your computer) an
 [Running Nadeko on tmux]: #running-nadeko-on-tmux-if-you-dont-want-to-use-pm2
 [Making Nadeko persist upon system restarts (tmux)]: #making-nadeko-persist-upon-system-restarts-tmux-for-advanced-users
 [Setting up Nadeko on a VPS (Digital Ocean)]: #setting-up-nadeko-on-a-linux-vps-digital-ocean-droplet
-[Setting up WinSCP]: #setting-up-winscp

@@ -14,7 +14,7 @@
 
 - OSX 10.12 (Sierra) or higher (needed for .NET Core 2.x).
 - [Homebrew](http://brew.sh/). 
-- [Create a Discord Bot application](../../jsons-explained/#creating-discord-bot-application) and [invite the bot to your server](../../jsons-explained/#inviting-your-bot-to-your-server).  
+- [Create a Discord Bot application](../../create-invite/#creating-discord-bot-application) and [invite the bot to your server](../../create-invite/#inviting-your-bot-to-your-server).  
   
 #### Installing Homebrew
 
@@ -28,19 +28,23 @@
 Run this command in Terminal (copy-paste the entire block):  
 
 ``` bash
-brew install wget git ffmpeg openssl opus opus-tools opusfile libffi libsodium tmux python youtube-dl redis npm \
-brew services start redis \
+brew install wget git ffmpeg openssl opus opus-tools opusfile libffi libsodium tmux python youtube-dl redis npm
+
+brew services start redis
+
 npm install pm2@3.1.3 -g 
 ```
 
 **Installing dotNET Core SDK**
 
-- Download [dotNET Core SDK 2.1](https://dotnet.microsoft.com/download/thank-you/dotnet-sdk-2.1.801-macos-x64-installer)
+- Download [dotNET Core SDK 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 - Open the `.pkg` file you've downloaded and install it.
 - Run this command in Terminal. There won't be any output. (copy-paste the entire block):
 ``` bash
-ln -s /usr/local/share/dotnet/dotnet /usr/local/bin \
-ln -s /usr/local/opt/openssl/lib/libcrypto.1.0.0.dylib /usr/local/lib/ \
+ln -s /usr/local/share/dotnet/dotnet /usr/local/bin
+
+ln -s /usr/local/opt/openssl/lib/libcrypto.1.0.0.dylib /usr/local/lib/
+
 ln -s /usr/local/opt/openssl/lib/libssl.1.0.0.dylib /usr/local/lib/
 ```
 

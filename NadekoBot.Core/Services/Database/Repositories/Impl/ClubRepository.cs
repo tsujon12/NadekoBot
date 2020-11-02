@@ -52,7 +52,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
         public ClubInfo GetByName(string name, int discrim, Func<DbSet<ClubInfo>, IQueryable<ClubInfo>> func = null)
         {
             if (func == null)
-                return _set
+                return _set.AsQueryable()
                     .Where(x => x.Name == name && x.Discrim == discrim)
                     .Include(x => x.Users)
                     .Include(x => x.Bans)
@@ -64,9 +64,10 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public int GetNextDiscrim(string clubName)
         {
-            return _set
-                .Where(x => x.Name.ToUpperInvariant() == clubName.ToUpperInvariant())
+            return _set.AsQueryable()
+                .Where(x => x.Name.ToUpper() == clubName.ToUpper())
                 .Select(x => x.Discrim)
+                .ToList()
                 .DefaultIfEmpty()
                 .Max() + 1;
         }
@@ -85,7 +86,7 @@ namespace NadekoBot.Core.Services.Database.Repositories.Impl
 
         public ClubInfo[] GetClubLeaderboardPage(int page)
         {
-            return _set
+            return _set.AsQueryable()
                 .OrderByDescending(x => x.Xp)
                 .Skip(page * 9)
                 .Take(9)

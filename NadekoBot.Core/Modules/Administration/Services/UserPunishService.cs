@@ -148,7 +148,7 @@ namespace NadekoBot.Modules.Administration.Services
             {
                 if (uow._context.Database.IsNpgsql())
                 {
-                    var cleared = await uow._context.Database.ExecuteSqlCommandAsync(@$"
+                    var cleared = await uow._context.Database.ExecuteSqlRawAsync(@$"
                                                                                             UPDATE ""Warnings""
                                                                                             SET ""Forgiven"" = true,
                                                                                             ""ForgivenBy"" = 'Expiry'
@@ -156,7 +156,7 @@ namespace NadekoBot.Modules.Administration.Services
                                                                                             AND ""Forgiven"" = false
                                                                                             AND ""DateAdded"" < NOW()::timestamp - (SELECT ""WarnExpireHours"" || ' hours' FROM ""GuildConfigs"" as gc WHERE gc.""GuildId"" = ""Warnings"".""GuildId"")::interval;");
 
-                    var deleted = await uow._context.Database.ExecuteSqlCommandAsync($@"DELETE FROM ""Warnings""
+                    var deleted = await uow._context.Database.ExecuteSqlRawAsync($@"DELETE FROM ""Warnings""
                                                                                             WHERE ""GuildId"" in (SELECT ""GuildId"" FROM ""GuildConfigs"" WHERE ""WarnExpireHours"" > 0 AND ""WarnExpireAction"" = 1)
                     	                                                                    AND ""DateAdded"" < NOW()::timestamp - (SELECT ""WarnExpireHours"" || ' hours' FROM ""GuildConfigs"" as gc WHERE gc.""GuildId"" = ""Warnings"".""GuildId"")::interval;");
 
@@ -168,14 +168,14 @@ namespace NadekoBot.Modules.Administration.Services
 
                 if (uow._context.Database.IsSqlServer())
                 {
-                    var cleared = await uow._context.Database.ExecuteSqlCommandAsync($@"UPDATE Warnings
+                    var cleared = await uow._context.Database.ExecuteSqlRawAsync($@"UPDATE Warnings
                                                                                         SET Forgiven = 1,
                                                                                         ForgivenBy = 'Expiry'
                                                                                         WHERE GuildId in (SELECT GuildId FROM GuildConfigs WHERE WarnExpireHours > 0 AND WarnExpireAction = 0)
                     	                                                                AND Forgiven = 0
                     	                                                                AND DateAdded < DATEADD(hour, -(SELECT WarnExpireHours FROM GuildConfigs as gc WHERE gc.GuildId = Warnings.GuildId),GETUTCDATE());");
 
-                    var deleted = await uow._context.Database.ExecuteSqlCommandAsync($@"DELETE FROM Warnings
+                    var deleted = await uow._context.Database.ExecuteSqlRawAsync($@"DELETE FROM Warnings
                                                                                         WHERE GuildId in (SELECT GuildId FROM GuildConfigs WHERE WarnExpireHours > 0 AND WarnExpireAction = 1)
                     	                                                                AND DateAdded < DATEADD(hour, -(SELECT WarnExpireHours FROM GuildConfigs as gc WHERE gc.GuildId = Warnings.GuildId),GETUTCDATE());");
 
@@ -202,38 +202,38 @@ namespace NadekoBot.Modules.Administration.Services
                 {
                     if (uow._context.Database.IsNpgsql())
                     {
-                        await uow._context.Database.ExecuteSqlCommandAsync($@"UPDATE ""Warnings""
+                        await uow._context.Database.ExecuteSqlInterpolatedAsync($@"UPDATE ""Warnings""
                                                                             SET ""Forgiven"" = true,
                                                                             ""ForgivenBy"" = 'Expiry'
                                                                             WHERE ""GuildId""={guildId}
                                                                             AND ""Forgiven"" = false
-                                                                            AND ""DateAdded"" < NOW()::timestamp - interval '" + hours +  "hours'");
+                                                                            AND ""DateAdded"" < NOW()::timestamp - interval '{hours}hours'");
                     }
 
                     if (uow._context.Database.IsSqlServer())
                     {
-                        await uow._context.Database.ExecuteSqlCommandAsync($@"UPDATE warnings
+                        await uow._context.Database.ExecuteSqlInterpolatedAsync($@"UPDATE warnings
                                                                             SET Forgiven = 1,
                                                                             ForgivenBy = 'Expiry'
                                                                             WHERE GuildId={guildId}
                                                                             AND Forgiven = 0
-                                                                            AND DateAdded < DATEADD(hour,-" + hours + ",GETUTCDATE())");
+                                                                            AND DateAdded < DATEADD(hour,-{hours},GETUTCDATE())");
                     }
                 }
                 else if (config.WarnExpireAction == WarnExpireAction.Delete)
                 {
                     if (uow._context.Database.IsNpgsql())
                     {
-                        await uow._context.Database.ExecuteSqlCommandAsync($@"DELETE FROM ""Warnings""
+                        await uow._context.Database.ExecuteSqlInterpolatedAsync($@"DELETE FROM ""Warnings""
                                                                             WHERE ""GuildId""={guildId}
-                                                                            AND ""DateAdded"" < NOW()::timestamp - interval '" + hours + "hours'");
+                                                                            AND ""DateAdded"" < NOW()::timestamp - interval '{hours}hours'");
                     }
 
                     if (uow._context.Database.IsSqlServer())
                     {
-                        await uow._context.Database.ExecuteSqlCommandAsync($@"DELETE FROM Warnings
+                        await uow._context.Database.ExecuteSqlInterpolatedAsync($@"DELETE FROM Warnings
                                                                             WHERE GuildId={guildId}
-                                                                            AND DateAdded < DATEADD(hour,-" + hours + ",GETUTCDATE())");
+                                                                            AND DateAdded < DATEADD(hour,-{hours},GETUTCDATE())");
                     }
                 }
 

@@ -206,6 +206,10 @@ namespace NadekoBot.Migrations
 
                     b.Property<int>("MaxBet");
 
+                    b.Property<int>("MaxXpMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasDefaultValue(720);
+
                     b.Property<int>("MigrationVersion");
 
                     b.Property<int>("MinBet");
@@ -237,6 +241,10 @@ namespace NadekoBot.Migrations
                     b.Property<int>("TriviaCurrencyReward");
 
                     b.Property<string>("UpdateString");
+
+                    b.Property<double>("VoiceXpPerMinute")
+                        .ValueGeneratedOnAdd()
+                        .HasDefaultValue(0);
 
                     b.Property<int>("WaifuGiftMultiplier")
                         .ValueGeneratedOnAdd()

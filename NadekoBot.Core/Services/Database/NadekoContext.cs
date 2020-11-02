@@ -14,6 +14,7 @@ namespace NadekoBot.Core.Services.Database
     {
         public NadekoContext CreateDbContext(string[] args)
         {
+            LogSetup.SetupLogger(-2);
             var optionsBuilder = new DbContextOptionsBuilder<NadekoContext>();
             IBotCredentials creds = new BotCredentials();
             if (creds.Db.Type.ToLower() == "sqlserver")
@@ -166,6 +167,12 @@ namespace NadekoBot.Core.Services.Database
 
             botConfigEntity.Property(x => x.XpPerMessage)
                 .HasDefaultValue(3);
+
+            botConfigEntity.Property(x => x.VoiceXpPerMinute)
+                .HasDefaultValue(0);
+
+            botConfigEntity.Property(x => x.MaxXpMinutes)
+                .HasDefaultValue(720);
 
             botConfigEntity.Property(x => x.PatreonCurrencyPerCent)
                 .HasDefaultValue(1.0f);

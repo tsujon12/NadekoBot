@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Discord;
 using NadekoBot.Core.Modules.Administration.Services;
 using System.Linq;
-using NadekoBot.Core.Services;
 
 #if !GLOBAL_NADEKO
 namespace NadekoBot.Modules.Administration
@@ -17,6 +16,7 @@ namespace NadekoBot.Modules.Administration
         [OwnerOnly]
         public class DangerousCommands : NadekoSubmodule<DangerousCommandsService>
         {
+
             private async Task InternalExecSql(string sql, params object[] reps)
             {
                 sql = string.Format(sql, reps);

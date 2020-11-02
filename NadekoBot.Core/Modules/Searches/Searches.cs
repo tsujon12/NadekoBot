@@ -142,7 +142,6 @@ namespace NadekoBot.Modules.Searches
 
         // done in 3.0
         [NadekoCommand, Usage, Description, Aliases]
-        [NoPublicBot]
         public async Task Time([Leftover] string query)
         {
             if (!await ValidateQuery(ctx.Channel, query).ConfigureAwait(false))
@@ -151,7 +150,7 @@ namespace NadekoBot.Modules.Searches
             await ctx.Channel.TriggerTypingAsync().ConfigureAwait(false);
 
             var (data, err) = await _service.GetTimeDataAsync(query).ConfigureAwait(false);
-            if (!(err == null))
+            if (!(err is null))
             {
                 string errorKey;
                 switch (err)
@@ -702,7 +701,7 @@ namespace NadekoBot.Modules.Searches
             if (usr == null)
                 usr = (IGuildUser)ctx.User;
 
-            var avatarUrl = usr.RealAvatarUrl();
+            var avatarUrl = usr.RealAvatarUrl(2048);
 
             if (avatarUrl == null)
             {
@@ -713,8 +712,7 @@ namespace NadekoBot.Modules.Searches
             await ctx.Channel.EmbedAsync(new EmbedBuilder().WithOkColor()
                 .AddField(efb => efb.WithName("Username").WithValue(usr.ToString()).WithIsInline(false))
                 .AddField(efb => efb.WithName("Avatar Url").WithValue(avatarUrl).WithIsInline(false))
-                .WithThumbnailUrl(avatarUrl.ToString())
-                .WithImageUrl(avatarUrl.ToString()), ctx.User.Mention).ConfigureAwait(false);
+                .WithThumbnailUrl(avatarUrl.ToString()), ctx.User.Mention).ConfigureAwait(false);
         }
 
         // done in 3.0

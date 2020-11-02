@@ -1,6 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using NadekoBot.Core.Services.Database;
 using System;
 using System.IO;
@@ -18,18 +16,17 @@ namespace NadekoBot.Core.Services
         private readonly DbContextOptions<NadekoContext> options;
         private readonly DbContextOptions<NadekoContext> migrateOptions;
 
-        private static readonly ILoggerFactory _loggerFactory = new LoggerFactory(new[] {
-            new ConsoleLoggerProvider((category, level)
-                => category == DbLoggerCategory.Database.Command.Name
-                   && level >= LogLevel.Information, true)
-            });
+        //private static readonly ILoggerFactory _loggerFactory = new LoggerFactory(new[] {
+        //    new ConsoleLoggerProvider((category, level)
+        //        => category == DbLoggerCategory.Database.Command.Name
+        //           && level >= LogLevel.Information, true)
+        //    });
 
         public DbService(IBotCredentials creds)
         {
             var optionsBuilder = new DbContextOptionsBuilder<NadekoContext>()
                 //.UseLoggerFactory(_loggerFactory)
                 ;
-
             if (creds.Db.Type.ToLower() == "sqlserver")
             {
                 optionsBuilder.UseSqlServer(creds.Db.ConnectionString);
@@ -38,7 +35,6 @@ namespace NadekoBot.Core.Services
             {
                 optionsBuilder.UseNpgsql(creds.Db.ConnectionString);
             }
-
             options = optionsBuilder.Options;
 
             //optionsBuilder = new DbContextOptionsBuilder<NadekoContext>();
@@ -57,6 +53,7 @@ namespace NadekoBot.Core.Services
                     mContext.SaveChanges();
                     mContext.Dispose();
                 }
+
                 context.EnsureSeedData();
                 context.SaveChanges();
             }
@@ -68,11 +65,11 @@ namespace NadekoBot.Core.Services
             context.Database.SetCommandTimeout(60);
             var conn = context.Database.GetDbConnection();
             conn.Open();
+
             return context;
         }
 
         public IUnitOfWork GetDbContext() => new UnitOfWork(GetDbContextInternal());
-
         public DatabaseTypeEnum GetDatabaseType()
         {
             using (var uow = GetDbContext())

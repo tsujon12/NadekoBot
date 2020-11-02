@@ -18,12 +18,12 @@ This is the recommended way of installing Nadeko from source. If you don't want 
 
 - Windows 7 or later
     - If you are on Windows 7, you must update [PowerShell].
-- [dotNET core 2.1 SDK][dotNET] (restart Windows after installation)
+- [dotNET core 3.1 SDK][dotNET] (restart Windows after installation)
 - [Git] (select [this option](https://i.imgur.com/zlWVTsi.png) during the installation process)
 - Redis
     - Windows 64 bit: Download and install the [latest msi][Redis]. Don't forget to [add it to the path environment variable](https://i.imgur.com/uUby6Xw.png) during the installation process.
     - Windows 32 bit: Skip this step
-- [Create a Discord Bot application](../../jsons-explained/#creating-discord-bot-application) and [invite the bot to your server](../../jsons-explained/#inviting-your-bot-to-your-server).
+- [Create a Discord Bot application](../../create-invite/#creating-discord-bot-application) and [invite the bot to your server](../../create-invite/#inviting-your-bot-to-your-server).
 
 **Optional**
 
@@ -84,7 +84,7 @@ This is the *"hard"* way of installing Nadeko. If you're here, we are assuming y
 #### Prerequisites
 
 - Windows 7 or later
-- [dotNET core 2.1 SDK][dotNET] (restart Windows after installation)
+- [dotNET core 3.1 SDK][dotNET] (restart Windows after installation)
 - [Git] (select [this option](https://i.imgur.com/zlWVTsi.png) during the installation process)
 - Redis
     - Windows 64 bit: Download and install the [latest msi][Redis]. Don't forget to [add it to the path environment variable](https://i.imgur.com/uUby6Xw.png) during the installation process.
@@ -158,7 +158,7 @@ Other useful commands:
 
 [Notepad++]: https://notepad-plus-plus.org/
 [PowerShell]: https://www.microsoft.com/en-us/download/details.aspx?id=54616
-[dotNET]: https://www.microsoft.com/net/download/dotnet-core/2.1
+[dotNET]: https://www.microsoft.com/net/download/dotnet-core/3.1
 [Redis]: https://github.com/MicrosoftArchive/redis/releases/tag/win-3.0.504
 [Git]: https://git-scm.com/downloads
 [Visual C++ 2010 (x86)]: https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe
